@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat Interface</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.1/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.4.1/jquery.cookie.min.js"></script>
+
+    <script>
+
+        
+        
+        $(document).ready(function() {
+            var socket = io.connect('http://localhost:5000');
+            socket.on('message', function(response) {
+                var messageElement = document.getElementById(response.message_id);
+                
+                if (!messageElement) {
+                // Create a new message element if it doesn't exist
+                messageElement = document.createElement("div");
+                messageElement.id = response.message_id;
+                // Append the message element to a container in the frontend
+                var container = document.getElementById("chat-history");
+                container.appendChild(messageElement);
+                }
+
+                // Loop through the moderations in the response
+                response.moderations.forEach(function(moderation) {
+                    
+
+                if (moderation.update) {
+                    // Create a new paragraph element to display the moderation content
+                    messageElement.innerHTML = moderation.content;
+                }
+                });
+                // Handle the response data here
+            });
+            // Function to append the bot response to the chat history
+            function appendBotResponse(botResponse) {
+                $('#chat-history').append('<div><strong>Bot:</strong> ' + botResponse + '</div>');
+
+                // Scroll to the bottom of the chat history
+                $('#chat-history').scrollTop($('#chat-history')[0].scrollHeight);
+            }
+
+            // Function to fetch the chat history
+            function fetchChatHistory() {
+                var chatId = $('#chat-id').val();
+
+                $.ajax({
+                    type: 'GET',
+                    url: '/fetch-chat',
+                    contentType: 'application/json',
+                    success: function(response) {
+                        // Append existing chat history to the frontend
+                        $('#chat-history').empty();
+                        var chatHistory = response.messages;
+                        chatHistory.forEach(function(message) {
+                            if (message.user_query) {
+                                $('#chat-history').append('<div><strong>User:</strong> ' + message.user_query + '</div>');
+                            }
+                            if (message.bot_response) {
+                                appendBotResponse(message.bot_response);
+                            }
+                        });
+
+                        // Scroll to the bottom of the chat history
+                        $('#chat-history').scrollTop($('#chat-history')[0].scrollHeight);
+                    }
+                });
+            }
+
+            // Function to send user query to the server
+            function sendUserQuery() {
+                var chatId = $('#chat-id').val();
+                var userQuery = $('#user-query').val();
+                $('#chat-history').append('<div><strong>User:</strong> ' + userQuery + '</div>');
+                        
+                $.ajax({
+                    type: 'POST',
+                    url: '/send-message',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        'chat_id': chatId,
+                        'user_query': userQuery
+                    }),
+                    success: function(response) {
+                       
+                        // Clear the user input field
+                        $('#user-query').val('');
+                    }
+                });
+            }
+
+            // Check if the chat history exists
+            var chatId = $.cookie('chat_id');
+            if (chatId!="None") {
+                console.log(chatId);
+                fetchChatHistory();
+            }
+
+            // Send user query to the server
+            $('#user-input-form').submit(function(e) {
+                e.preventDefault();
+                sendUserQuery();
+                // fetchChatHistory();
+            });
+        });
+    </script>
+    <style>
+        #chat-history {
+            height: 200px;
+            overflow-y: scroll;
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Chat Interface</h1>
+    <div id="chat-history"></div>
+    <form id="user-input-form">
+       <input type="text" id="user-query" placeholder="Your message" required>
+        <button type="submit">Send</button>
+    </form>
+</body>
+</html>
