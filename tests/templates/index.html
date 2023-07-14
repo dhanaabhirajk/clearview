@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Event Stream Example</title>
+    <script>
+        var eventSource = new EventSource('/stream');
+
+        eventSource.onmessage = function (event) {
+            var data = event.data;
+            console.log('Received event: ' + data);
+            // Handle the event data as needed
+        };
+    </script>
+</head>
+<body>
+    <h1>Event Stream Example</h1>
+</body>
+</html>

@@ -1,12 +1,8 @@
-from flask import Flask, render_template, jsonify, request, stream_with_context, Response,make_response
+from flask import Flask, render_template, jsonify, request, Response,make_response
 from src import db
-from flask_socketio import SocketIO, emit
 import uuid
-import time
-from bson import encode
 
 app = Flask(__name__)
-socketio = SocketIO(app)
 
 db_conn = db.connect_to_mongodb()
 
@@ -21,7 +17,6 @@ message_schema = {
         'user_query': '',
         'bot_response': '',
 }
-
 
 
 def generate_unique_id():
@@ -52,7 +47,7 @@ def fetch_chat():
 
 @app.route('/send-message', methods=['POST'])
 def send_message():
-    def generate_responses():
+    def generate_response():
         data = request.json
         chat_id = request.cookies.get("chat_id")
         user_query = data['user_query']
@@ -74,21 +69,8 @@ def send_message():
         # Process the user query and generate bot response
         # for response, history in model.stream_chat(tokenizer, user_query, history, max_length=max_length,
         #                                            top_p=top_p, temperature=temperature):
-            res = {
-                'chat_id':chat_id,
-                "message_id": message_id,
-                "moderations": [
-                    {
-                    "author": "bot",
-                    "update": True,
-                    "content": response,
-                    }
-                ]
-                }
-            
-            socketio.emit('message',res)
-            time.sleep(0.00001)
-
+            pass
+        
 
         # Insert the final response into the database
         final_response = response
@@ -106,8 +88,24 @@ def send_message():
                 { 'chat_id': chat_id },
                 { '$push': { 'messages': final_message } }
             )
-        return "success"
-    return generate_responses()
+        return {
+                'chat_id':chat_id,
+                'new_chat':is_new_chat,
+                "message_id": message_id,
+                "message": [
+                    {
+                    "author": "user",
+                    "update": True,
+                    "content": user_query,
+                    },
+                    {
+                    "author": "bot",
+                    "update": True,
+                    "content": response,
+                    }
+                ]
+                }
+    return generate_response()
 
 if __name__ == '__main__':
     app.run(debug=True)

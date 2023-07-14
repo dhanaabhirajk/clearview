@@ -1,127 +1,129 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Chat Interface</title>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.1/socket.io.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.4.1/jquery.cookie.min.js"></script>
-
-    <script>
-
-        
-        
-        $(document).ready(function() {
-            var socket = io.connect('http://localhost:5000');
-            socket.on('message', function(response) {
-                var messageElement = document.getElementById(response.message_id);
-                
-                if (!messageElement) {
-                // Create a new message element if it doesn't exist
-                messageElement = document.createElement("div");
-                messageElement.id = response.message_id;
-                // Append the message element to a container in the frontend
-                var container = document.getElementById("chat-history");
-                container.appendChild(messageElement);
-                }
-
-                // Loop through the moderations in the response
-                response.moderations.forEach(function(moderation) {
-                    
-
-                if (moderation.update) {
-                    // Create a new paragraph element to display the moderation content
-                    messageElement.innerHTML = moderation.content;
-                }
-                });
-                // Handle the response data here
-            });
-            // Function to append the bot response to the chat history
-            function appendBotResponse(botResponse) {
-                $('#chat-history').append('<div><strong>Bot:</strong> ' + botResponse + '</div>');
-
-                // Scroll to the bottom of the chat history
-                $('#chat-history').scrollTop($('#chat-history')[0].scrollHeight);
-            }
-
-            // Function to fetch the chat history
-            function fetchChatHistory() {
-                var chatId = $('#chat-id').val();
-
-                $.ajax({
-                    type: 'GET',
-                    url: '/fetch-chat',
-                    contentType: 'application/json',
-                    success: function(response) {
-                        // Append existing chat history to the frontend
-                        $('#chat-history').empty();
-                        var chatHistory = response.messages;
-                        chatHistory.forEach(function(message) {
-                            if (message.user_query) {
-                                $('#chat-history').append('<div><strong>User:</strong> ' + message.user_query + '</div>');
-                            }
-                            if (message.bot_response) {
-                                appendBotResponse(message.bot_response);
-                            }
-                        });
-
-                        // Scroll to the bottom of the chat history
-                        $('#chat-history').scrollTop($('#chat-history')[0].scrollHeight);
-                    }
-                });
-            }
-
-            // Function to send user query to the server
-            function sendUserQuery() {
-                var chatId = $('#chat-id').val();
-                var userQuery = $('#user-query').val();
-                $('#chat-history').append('<div><strong>User:</strong> ' + userQuery + '</div>');
-                        
-                $.ajax({
-                    type: 'POST',
-                    url: '/send-message',
-                    contentType: 'application/json',
-                    data: JSON.stringify({
-                        'chat_id': chatId,
-                        'user_query': userQuery
-                    }),
-                    success: function(response) {
-                       
-                        // Clear the user input field
-                        $('#user-query').val('');
-                    }
-                });
-            }
-
-            // Check if the chat history exists
-            var chatId = $.cookie('chat_id');
-            if (chatId!="None") {
-                console.log(chatId);
-                fetchChatHistory();
-            }
-
-            // Send user query to the server
-            $('#user-input-form').submit(function(e) {
-                e.preventDefault();
-                sendUserQuery();
-                // fetchChatHistory();
-            });
-        });
-    </script>
-    <style>
-        #chat-history {
-            height: 200px;
-            overflow-y: scroll;
-            border: 1px solid #ccc;
-            padding: 10px;
-        }
-    </style>
+    <title>Clear View</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/css/chat.css">
+    <script src="/static/js/cookie.js"></script>
 </head>
 <body>
-    <h1>Chat Interface</h1>
-    <div id="chat-history"></div>
-    <form id="user-input-form">
-       <input type="text" id="user-query" placeholder="Your message" required>
-        <button type="submit">Send</button>
-    </form>
+    <div class="container">
+        <div class="chat-container">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="chat-intro">
+                        <h3>ClearView: Your Online Product Doubt Resolver</h3>
+                        <img src="/static/img/clearview-logo.png" alt="Product Image" class="product-image">
+                        <p>Welcome! I'm here to help resolve any doubts or questions you have about our product.</p>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="chat-transcript" id="chat-messages"></div>
+                    <div class="new-chat">
+                        <button onclick="createNewChat()" id="new-chat-button">New Chat</a>
+                    </div>
+                    <div class="chat-input">
+                        <div class="input-group">
+                            <input type="text" id="user-query" class="form-control" placeholder="Type your message">
+                            <div class="input-group-append">
+                                <button class="btn btn-primary" id="send-button">Send</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            var chatMessages = document.getElementById('chat-messages');
+            var userQueryInput = document.getElementById('user-query');
+            var sendButton = document.getElementById('send-button');
+            
+            var chatId = getCookie('chat_id');
+        
+            if (chatId != 'None') {
+                
+                // Fetch chat history
+                fetch('/fetch-chat')
+                    .then(function(response) {
+                        return response.json();
+                    })
+                    .then(function(data) {
+                        // Display chat history
+
+                        // Display chat history
+                        data.messages.forEach(function(message) {
+                            var userQueryElement = document.createElement('div');
+                            userQueryElement.classList.add('chat-message', 'user-message');
+                            userQueryElement.innerHTML = '<p>' + message.user_query + '</p>';
+                            chatMessages.appendChild(userQueryElement);
+
+                            // Display bot response
+                            var botResponseElement = document.createElement('div');
+                            botResponseElement.classList.add('chat-message', 'bot-message');
+                            botResponseElement.innerHTML = '<p>' + message.bot_response + '</p>';
+                            chatMessages.appendChild(botResponseElement);
+
+                            // Scroll to the bottom of the chat container
+                            chatMessages.scrollTop = chatMessages.scrollHeight;
+                        })
+                    });
+            }
+
+            // Send message
+            sendButton.addEventListener('click', function() {
+                var userQuery = userQueryInput.value;
+
+                if (userQuery) {
+                    // Clear input field
+                    userQueryInput.value = '';
+
+                    // Send user query to server
+                    fetch('/send-message', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            user_query: userQuery
+                        })
+                    })
+                    .then(function(response) {
+                        return response.json();
+                    })
+                    .then(function(data) {
+                        if (data.new_chat) {
+                            window.history.pushState({}, '', '/c/' + data.chat_id);
+                            setCookie("chat_id", chatId, 30);
+                        }
+
+                        // Display user query
+                        var userQueryElement = document.createElement('div');
+                        userQueryElement.classList.add('chat-message', 'user-message');
+                        userQueryElement.innerHTML = '<p>' + data.message[0].content + '</p>';
+                        chatMessages.appendChild(userQueryElement);
+
+                        // Display bot response
+                        var botResponseElement = document.createElement('div');
+                        botResponseElement.classList.add('chat-message', 'bot-message');
+                        botResponseElement.innerHTML = '<p>' + data.message[1].content + '</p>';
+                        chatMessages.appendChild(botResponseElement);
+
+                        // Scroll to the bottom of the chat container
+                        chatMessages.scrollTop = chatMessages.scrollHeight;
+                    });
+                }
+            });
+        });
+        function createNewChat(){
+            window.history.pushState({}, '', '/');
+            var element = document.getElementById("chat-messages");
+            element.innerHTML = "";
+            setCookie("chat_id",'None',30)
+        }
+    </script>
 </body>
 </html>
