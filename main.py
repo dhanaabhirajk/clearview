@@ -1,10 +1,15 @@
-from flask import Flask, render_template, jsonify, request, Response,make_response
-from src import db
+from src import db,ngrok,scraper,chatGLM
+from flask import Flask, render_template, request,make_response
 import uuid
+
 
 app = Flask(__name__)
 
 db_conn = db.connect_to_mongodb()
+
+# Update base URLs to use the public ngrok URL
+app.config["BASE_URL"] = ngrok.open_tunnel()
+
 
 collection = db_conn['chats']
 
@@ -51,7 +56,9 @@ def send_message():
         data = request.json
         chat_id = request.cookies.get("chat_id")
         user_query = data['user_query']
-
+        info = scraper.extract_info(user_query)
+        if(info!= None):
+          user_query += "\nInformation : \n" + info
         chat_history = collection.find_one({'chat_id': chat_id})
         is_new_chat = chat_history == None
         chat = None
@@ -65,20 +72,14 @@ def send_message():
             history = [(message["user_query"],message["bot_response"]) for message in chat_history['messages']]
 
         message_id = generate_unique_id()
-        for response, history in [("How",[("hi","How")]),("How can",[("hi","How can ")]),("How can I ",[("hi","How can I")])]:
         # Process the user query and generate bot response
-        # for response, history in model.stream_chat(tokenizer, user_query, history, max_length=max_length,
-        #                                            top_p=top_p, temperature=temperature):
-            pass
-        
+        response = chatGLM.get_bot_response(user_query,history)
 
-        # Insert the final response into the database
-        final_response = response
-
+        # Insert the response into the database
         final_message = message_schema.copy()
         final_message['message_id'] = message_id
         final_message['user_query'] = user_query
-        final_message['bot_response'] = final_response
+        final_message['bot_response'] = response
 
         if is_new_chat:
             chat['messages'].append(final_message)
@@ -108,5 +109,4 @@ def send_message():
     return generate_response()
 
 if __name__ == '__main__':
-    app.run(debug=True)
-
+    app.run()
