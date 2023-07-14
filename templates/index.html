@@ -67,7 +67,7 @@
                     .then(function(data) {
                         if (data.new_chat) {
                             window.history.pushState({}, '', '/c/' + data.chat_id);
-                            setCookie("chat_id", data.chatId, 30);
+                            setCookie("chat_id", data.chat_id, 30);
                         }
 
                         // Display user query
