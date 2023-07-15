@@ -1,31 +1,33 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>Clear View</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
     <link rel="stylesheet" href="/static/css/chat.css">
-    <script src="/static/js/cookie.js"></script>
+    <link rel="stylesheet" href="/static/css/markdown.css">
+    <script src="/static/js/chat.js"></script>
     <script>
-        
-        document.addEventListener('DOMContentLoaded', function() {
+
+        document.addEventListener('DOMContentLoaded', function () {
             var chatMessages = document.getElementById('chat-messages');
             var userQueryInput = document.getElementById('user-query');
             var sendButton = document.getElementById('send-button');
-            
+
             var chatId = getCookie('chat_id');
-        
+
             if (chatId != 'None') {
-                
+
                 // Fetch chat history
                 fetch('/fetch-chat')
-                    .then(function(response) {
+                    .then(function (response) {
                         return response.json();
                     })
-                    .then(function(data) {
+                    .then(function (data) {
                         // Display chat history
 
                         // Display chat history
-                        data.messages.forEach(function(message) {
+                        data.messages.forEach(function (message) {
                             var userQueryElement = document.createElement('div');
                             userQueryElement.classList.add('chat-message', 'user-message');
                             userQueryElement.innerHTML = '<p>' + message.user_query + '</p>';
@@ -34,7 +36,7 @@
                             // Display bot response
                             var botResponseElement = document.createElement('div');
                             botResponseElement.classList.add('chat-message', 'bot-message');
-                            botResponseElement.innerHTML = '<p>' + message.bot_response + '</p>';
+                            botResponseElement.innerHTML = '<p>' + render_markdown(message.bot_response) + '</p>';
                             chatMessages.appendChild(botResponseElement);
 
                             // Scroll to the bottom of the chat container
@@ -44,7 +46,7 @@
             }
 
             // Send message
-            sendButton.addEventListener('click', function() {
+            sendButton.addEventListener('click', function () {
                 var userQuery = userQueryInput.value;
 
                 if (userQuery) {
@@ -61,41 +63,42 @@
                             user_query: userQuery
                         })
                     })
-                    .then(function(response) {
-                        return response.json();
-                    })
-                    .then(function(data) {
-                        if (data.new_chat) {
-                            window.history.pushState({}, '', '/c/' + data.chat_id);
-                            setCookie("chat_id", data.chat_id, 30);
-                        }
+                        .then(function (response) {
+                            return response.json();
+                        })
+                        .then(function (data) {
+                            if (data.new_chat) {
+                                window.history.pushState({}, '', '/c/' + data.chat_id);
+                                setCookie("chat_id", data.chat_id, 30);
+                            }
 
-                        // Display user query
-                        var userQueryElement = document.createElement('div');
-                        userQueryElement.classList.add('chat-message', 'user-message');
-                        userQueryElement.innerHTML = '<p>' + data.message[0].content + '</p>';
-                        chatMessages.appendChild(userQueryElement);
+                            // Display user query
+                            var userQueryElement = document.createElement('div');
+                            userQueryElement.classList.add('chat-message', 'user-message');
+                            userQueryElement.innerHTML = '<p>' + data.message[0].content + '</p>';
+                            chatMessages.appendChild(userQueryElement);
 
-                        // Display bot response
-                        var botResponseElement = document.createElement('div');
-                        botResponseElement.classList.add('chat-message', 'bot-message');
-                        botResponseElement.innerHTML = '<p>' + data.message[1].content + '</p>';
-                        chatMessages.appendChild(botResponseElement);
+                            // Display bot response
+                            var botResponseElement = document.createElement('div');
+                            botResponseElement.classList.add('chat-message', 'bot-message');
+                            botResponseElement.innerHTML = '<p>' + render_markdown(data.message[1].content) + '</p>';
+                            chatMessages.appendChild(botResponseElement);
 
-                        // Scroll to the bottom of the chat container
-                        chatMessages.scrollTop = chatMessages.scrollHeight;
-                    });
+                            // Scroll to the bottom of the chat container
+                            chatMessages.scrollTop = chatMessages.scrollHeight;
+                        });
                 }
             });
         });
-        function createNewChat(){
+        function createNewChat() {
             window.history.pushState({}, '', '/');
             var element = document.getElementById("chat-messages");
             element.innerHTML = "";
-            setCookie("chat_id",'None',30)
+            setCookie("chat_id", 'None', 30)
         }
     </script>
 </head>
+
 <body>
     <div class="container">
         <div class="chat-container">
@@ -110,13 +113,15 @@
                 <div class="col-md-8">
                     <div class="chat-transcript" id="chat-messages"></div>
                     <div class="new-chat">
-                        <button onclick="createNewChat()" id="new-chat-button">New Chat</a>
+                        <button class="form-control new-chat-button" onclick="createNewChat()" id="new-chat-button">New
+                            Chat</a>
                     </div>
                     <div class="chat-input">
                         <div class="input-group">
-                            <input type="text" id="user-query" class="form-control" placeholder="Type your message">
+                            <textarea id="user-query" class="user-query form-control" oninput="autoResize()"
+                                placeholder="Type your message"></textarea>
                             <div class="input-group-append">
-                                <button class="btn btn-primary" id="send-button">Send</button>
+                                <button class="send-button" id="send-button">Send</button>
                             </div>
                         </div>
                     </div>
@@ -124,5 +129,9 @@
             </div>
         </div>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it@11/dist/markdown-it.min.js"></script>
+    <link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/default.min.css">
+    <script src="http://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
 </body>
+
 </html>

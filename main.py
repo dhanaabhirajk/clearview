@@ -8,7 +8,7 @@ app = Flask(__name__)
 db_conn = db.connect_to_mongodb()
 
 # Update base URLs to use the public ngrok URL
-app.config["BASE_URL"] = ngrok.open_tunnel()
+# app.config["BASE_URL"] = ngrok.open_tunnel()
 
 
 collection = db_conn['chats']
@@ -108,5 +108,12 @@ def send_message():
                 }
     return generate_response()
 
+#Production Deployment
+
 if __name__ == '__main__':
     app.run()
+
+#Local Deployment
+
+# if __name__ == '__main__':
+#     app.run(debug=True)

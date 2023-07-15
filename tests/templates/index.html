@@ -1,18 +1,24 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Event Stream Example</title>
-    <script>
-        var eventSource = new EventSource('/stream');
-
-        eventSource.onmessage = function (event) {
-            var data = event.data;
-            console.log('Received event: ' + data);
-            // Handle the event data as needed
-        };
-    </script>
+  <style>
+    textarea {
+      resize: none;
+      overflow: hidden;
+      height: 1em; /* Set initial height to display one line */
+      min-height: 1em; /* Set minimum height to display one line */
+      max-height: 4em; /* Set maximum height to display four lines */
+    }
+  </style>
+  <script>
+    function autoResize() {
+      const textArea = document.getElementById("myTextArea");
+      textArea.style.height = "auto";
+      textArea.style.height = textArea.scrollHeight + "px";
+    }
+  </script>
 </head>
 <body>
-    <h1>Event Stream Example</h1>
+  <textarea id="myTextArea" oninput="autoResize()"></textarea>
 </body>
 </html>

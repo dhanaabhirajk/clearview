@@ -1,7 +1,3 @@
-function deleteCookie(cookieName) {
-    document.cookie = cookieName + "=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-}
-
 function setCookie(cookieName, cookieValue, expirationDays) {
     deleteCookie(cookieName); // Delete existing cookie
     var d = new Date();
@@ -23,3 +19,27 @@ function getCookie(cookieName) {
 
     return null;
 }
+
+function deleteCookie(cookieName) {
+  document.cookie = cookieName + "=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+}
+
+function autoResize() {
+  const textArea = document.getElementById("user-query");
+  textArea.style.height = "auto";
+  textArea.style.height = textArea.scrollHeight + "px";
+}
+
+function render_markdown(markdown) {
+return window.markdownit({
+  highlight: function (str, lang) {
+    if (lang && hljs.getLanguage(lang)) {
+      try {
+        return hljs.highlight(str, { language: lang }).value;
+      } catch (__) {}
+    }
+
+    return '';      }
+}).render(markdown);
+}
+
