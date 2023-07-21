@@ -1,10 +1,8 @@
 from src import config
-from dotenv import load_dotenv
 import os
 from pyngrok import ngrok, conf
 
 def open_tunnel():
-    load_dotenv()
     
     # Enter your authtoken, which can be copied from https://dashboard.ngrok.com/auth
     conf.get_default().auth_token = os.environ['NGROK_AUTH_TOKEN']

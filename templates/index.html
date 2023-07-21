@@ -6,26 +6,33 @@
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
     <link rel="stylesheet" href="/static/css/chat.css">
     <link rel="stylesheet" href="/static/css/markdown.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <script src="/static/js/chat.js"></script>
     <script>
-
+        
         document.addEventListener('DOMContentLoaded', function () {
             var chatMessages = document.getElementById('chat-messages');
             var userQueryInput = document.getElementById('user-query');
             var sendButton = document.getElementById('send-button');
-
-            var chatId = getCookie('chat_id');
-
-            if (chatId != 'None') {
-
+            var path_parts = window.location.pathname.split('/');
+            if (path_parts[1] =='c') {
+                console.log(path_parts[2])
                 // Fetch chat history
-                fetch('/fetch-chat')
+                fetch('/fetch-chat',{
+                    method: 'POSt',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                    body: JSON.stringify({
+                            chat_id : path_parts[2]
+                        })
+                    })
+                
                     .then(function (response) {
                         return response.json();
                     })
                     .then(function (data) {
-                        // Display chat history
-
+                        sessionStorage.setItem("chat_id",data.chat_id);
                         // Display chat history
                         data.messages.forEach(function (message) {
                             var userQueryElement = document.createElement('div');
@@ -42,6 +49,9 @@
                             // Scroll to the bottom of the chat container
                             chatMessages.scrollTop = chatMessages.scrollHeight;
                         })
+                    }).catch(error => {
+                        // Handle errors here
+                        createNewChat();
                     });
             }
 
@@ -57,46 +67,80 @@
                     fetch('/send-message', {
                         method: 'POST',
                         headers: {
-                            'Content-Type': 'application/json'
+                            'Content-Type': 'application/json',
+                            'S-Session-Id': sessionStorage.getItem('sid')
                         },
                         body: JSON.stringify({
-                            user_query: userQuery
+                            user_query: userQuery,
+                            chat_id : sessionStorage.getItem('chat_id')
                         })
                     })
                         .then(function (response) {
                             return response.json();
                         })
                         .then(function (data) {
-                            if (data.new_chat) {
-                                window.history.pushState({}, '', '/c/' + data.chat_id);
-                                setCookie("chat_id", data.chat_id, 30);
+                            if(data.status == "Not Found"){
+                                createNewChat();
                             }
-
-                            // Display user query
-                            var userQueryElement = document.createElement('div');
-                            userQueryElement.classList.add('chat-message', 'user-message');
-                            userQueryElement.innerHTML = '<p>' + data.message[0].content + '</p>';
-                            chatMessages.appendChild(userQueryElement);
-
-                            // Display bot response
-                            var botResponseElement = document.createElement('div');
-                            botResponseElement.classList.add('chat-message', 'bot-message');
-                            botResponseElement.innerHTML = '<p>' + render_markdown(data.message[1].content) + '</p>';
-                            chatMessages.appendChild(botResponseElement);
-
-                            // Scroll to the bottom of the chat container
-                            chatMessages.scrollTop = chatMessages.scrollHeight;
+                            else if(data.status == "ok"){
+                                if (data.new_chat) {
+                                    window.history.replaceState({}, '', '/c/' + data.chat_id);
+                                    sessionStorage.setItem("chat_id",data.chat_id);
+                                }
+                                insertMessage(data);
+                            }  
                         });
                 }
             });
+        const socket = io();
+        function insertMessage(data) {
+            
+            var messageElement = document.getElementById(data.message_id);
+
+            if (!messageElement) {
+                // Display user query
+                // Create a new message element if it doesn't exist
+                messageElement = document.createElement("div");
+                messageElement.id = data.message_id;
+                var userQueryElement = document.createElement('div');
+                userQueryElement.classList.add('chat-message', 'user-message');
+                userQueryElement.innerHTML = '<p>' + data.message[0].content + '</p>';
+                messageElement.appendChild(userQueryElement);
+
+                // Display bot response
+                var botResponseElement = document.createElement('div');
+                botResponseElement.classList.add('chat-message', 'bot-message');
+                botResponseElement.innerHTML = '<p>' + render_markdown(data.message[1].content) + '</p>';
+                messageElement.appendChild(botResponseElement);
+
+                chatMessages.appendChild(messageElement);
+            }else{
+                const botMessageDiv = messageElement.querySelector('.bot-message');
+                if(data.message[1].update){
+                    botMessageDiv.innerHTML ='<p>' + render_markdown(data.message[1].content) + '</p>';
+                }
+            }
+            // Scroll to the bottom of the chat container
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        socket.on("connected", function (data) {
+            sessionStorage.setItem("sid", data.sid);
+        });
+        socket.on("message", function(data){
+            insertMessage(data);
+        });
+        socket.on("disconnect", () => {
+            sessionStorage.removeItem("sid");
+    });
         });
         function createNewChat() {
             window.history.pushState({}, '', '/');
             var element = document.getElementById("chat-messages");
             element.innerHTML = "";
-            setCookie("chat_id", 'None', 30)
+            sessionStorage.removeItem("chat_id");
         }
-    </script>
+        </script>
 </head>
 
 <body>
@@ -130,8 +174,8 @@
         </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/markdown-it@11/dist/markdown-it.min.js"></script>
-    <link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/default.min.css">
-    <script src="http://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/default.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
 </body>
 
 </html>

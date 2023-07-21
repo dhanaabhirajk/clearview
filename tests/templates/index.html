@@ -1,24 +1,100 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <style>
-    textarea {
-      resize: none;
-      overflow: hidden;
-      height: 1em; /* Set initial height to display one line */
-      min-height: 1em; /* Set minimum height to display one line */
-      max-height: 4em; /* Set maximum height to display four lines */
-    }
-  </style>
-  <script>
-    function autoResize() {
-      const textArea = document.getElementById("myTextArea");
-      textArea.style.height = "auto";
-      textArea.style.height = textArea.scrollHeight + "px";
-    }
-  </script>
+  <title>Socket.io Client</title>
 </head>
 <body>
-  <textarea id="myTextArea" oninput="autoResize()"></textarea>
+  <h1>Socket.io Client</h1>
+  <input type="text" id="messageInput" placeholder="Enter your message">
+  <button onclick="sendMessage()">Send</button>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+  <script>
+    function setCookie(cookieName, cookieValue, expirationDays) {
+    deleteCookie(cookieName); // Delete existing cookie
+    var d = new Date();
+    d.setTime(d.getTime() + (expirationDays * 24 * 60 * 60 * 1000)); // Calculate expiration date
+    var expires = "expires=" + d.toUTCString();
+    document.cookie = cookieName + "=" + cookieValue + ";" + expires + ";path=/";
+}
+function getCookie(cookieName) {
+    var name = cookieName + "=";
+    var decodedCookie = decodeURIComponent(document.cookie);
+    var cookieArray = decodedCookie.split(";");
+
+    for (var i = 0; i < cookieArray.length; i++) {
+        var cookie = cookieArray[i].trim();
+        if (cookie.indexOf(name) === 0) {
+        return cookie.substring(name.length, cookie.length);
+        }
+    }
+
+    return null;
+}
+
+function deleteCookie(cookieName) {
+  document.cookie = cookieName + "=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+}
+
+function autoResize() {
+  const textArea = document.getElementById("user-query");
+  textArea.style.height = "auto";
+  textArea.style.height = textArea.scrollHeight + "px";
+}
+
+function render_markdown(markdown) {
+return window.markdownit({
+  highlight: function (str, lang) {
+    if (lang && hljs.getLanguage(lang)) {
+      try {
+        return hljs.highlight(str, { language: lang }).value;
+      } catch (__) {}
+    }
+
+    return '';      }
+}).render(markdown);
+}
+
+
+  </script>
+  <script>
+    const socket = io();
+  
+    function sendMessage() {
+      const message = document.getElementById("messageInput").value;
+
+      fetch("/send_message", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ message: message ,sid:getCookie("sid")}),
+      })  
+      .then(response => response.json())
+      .then(data => {
+        // Handle the response from the server if needed
+        console.log(data);
+      })
+      .catch(error => {
+        console.error("Error:", error);
+      });
+    }
+  
+    socket.on("reply_message", function (data) {
+      const reply = data.message;
+      // Display the reply from the server to the user
+      console.log("Received reply: " + reply);
+    });
+
+    socket.on("connected", function (data) {
+      setCookie("sid", data.sid, 30);
+    });
+
+  </script>
 </body>
 </html>
+
+
+  
+  <!-- ... Rest of the HTML code ... -->
+  

@@ -4,3 +4,6 @@ venv/
 
 #DB config
 .env
+
+#files
+.vscode/

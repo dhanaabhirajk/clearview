@@ -1,9 +1,7 @@
 import os
-from dotenv import load_dotenv
 from pymongo import MongoClient
 
 def connect_to_mongodb():
-    load_dotenv()
     # Create the MongoDB connection string with the provided credentials
     MONGODB_URI = os.environ['MONGODB_URI']
 
