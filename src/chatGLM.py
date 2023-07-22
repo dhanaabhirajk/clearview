@@ -13,10 +13,11 @@ class ProductionChatGLM(BaseChatGLM):
         self.model = AutoModel.from_pretrained("THUDM/chatglm2-6b-int4", trust_remote_code=True).half().cuda().eval()
 
     def emit_bot_response(self, user_query, history, room, message_id, chat_id, is_new_chat):
+        
         for response, updated_history in self.model.stream_chat(self.tokenizer, user_query, history, 
-                                                                 max_length=config.max_length,
-                                                                 top_p=config.top_p, 
-                                                                 temperature=config.temperature):
+                                                                 max_length=config.MAX_LENGTH,
+                                                                 top_p=config.TOP_P, 
+                                                                 temperature=config.TEMPERATURE):
             emit("message", {
                 "status": "ok",
                 'chat_id': chat_id,

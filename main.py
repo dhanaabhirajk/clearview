@@ -1,15 +1,15 @@
 import os
-from dotenv import load_dotenv
-load_dotenv()
 from src import db,ngrok,scraper,chatGLM
-from flask import Flask, render_template, request,make_response
+from flask import Flask, render_template, request,make_response,send_from_directory
 import uuid
 from flask_socketio import SocketIO, emit
+from secrets_manager import SECRET_KEY
+from src import config
 
 app = Flask(__name__)
-app.config["SECRET_KEY"] = os.environ['SECRET_KEY']
+app.config["SECRET_KEY"] = SECRET_KEY
 
-p_flag = os.environ['PRODUCTION'] == "True"
+p_flag = config.STATUS_ENV == "PRODUCTION"
 
 # Update base URLs to use the public ngrok URL in production
 if p_flag:
@@ -17,6 +17,11 @@ if p_flag:
     app.debug = False
 else:
     app.debug = True
+
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(os.path.join(app.root_path, 'static'),
+                          'favicon.ico',mimetype='image/vnd.microsoft.icon')
 
 # Create an instance of ProductionChatGLM with p_flag=True
 glm = chatGLM.chatGLM(p_flag=p_flag)
@@ -138,4 +143,4 @@ def send_message():
 
 
 if __name__ == "__main__":
-    socketio.run(app)
+    socketio.run(app,port=config.PORT)

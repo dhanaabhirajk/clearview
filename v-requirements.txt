@@ -1,0 +1,6 @@
+Flask 
+Flask-socketio 
+pyngrok
+pymongo[srv]==3.10.1
+beautifulsoup4
+requests

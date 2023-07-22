@@ -1,9 +1,9 @@
 import os
 from pymongo import MongoClient
+from secrets_manager import MONGODB_URI
 
 def connect_to_mongodb():
     # Create the MongoDB connection string with the provided credentials
-    MONGODB_URI = os.environ['MONGODB_URI']
 
     # Create a MongoClient instance using the connection string
     client = MongoClient(MONGODB_URI)
