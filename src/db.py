@@ -1,6 +1,6 @@
 import os
 from pymongo import MongoClient
-from secrets_manager import MONGODB_URI
+from secrets_manager import MONGODB_URI,DB_NAME
 
 def connect_to_mongodb():
     # Create the MongoDB connection string with the provided credentials
@@ -15,6 +15,6 @@ def connect_to_mongodb():
         print(e)
     
         
-    return client['clearview']
+    return client[DB_NAME]
 
 

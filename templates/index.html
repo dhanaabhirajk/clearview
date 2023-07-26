@@ -3,38 +3,75 @@
 
 <head>
     <title>Clear View</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
     <link rel="stylesheet" href="/static/css/chat.css">
     <link rel="stylesheet" href="/static/css/markdown.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <script src="/static/js/chat.js"></script>
     <script>
-        
+        const socket = io();
+
+
         document.addEventListener('DOMContentLoaded', function () {
+
+
+            socket.on("connected", function (data) {
+                sessionStorage.setItem("sid", data.sid);
+            });
+
+
+            socket.on("message", function (data) {
+                insertMessage(data);
+            });
+
+
+            socket.on("disconnect", () => {
+                sessionStorage.removeItem("sid");
+            });
+
+
             var chatMessages = document.getElementById('chat-messages');
             var userQueryInput = document.getElementById('user-query');
             var sendButton = document.getElementById('send-button');
             var path_parts = window.location.pathname.split('/');
-            if (path_parts[1] =='c') {
-                console.log(path_parts[2])
+
+            // Function to disable the button during communication
+            function enableStop() {
+                sendButton.textContent = 'Stop';
+                sendButton.classList.add('stop-button'); // Apply the "stop-button" class
+            }
+
+            // Function to enable the button after receiving the response
+            function enableSend() {
+                sendButton.textContent = 'Send';
+                sendButton.classList.remove('stop-button'); // Remove the "stop-button" class
+            }
+            if (path_parts[1] == 'c') {
                 // Fetch chat history
-                fetch('/fetch-chat',{
+                fetch('/fetch-chat', {
                     method: 'POSt',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
                     body: JSON.stringify({
-                            chat_id : path_parts[2]
-                        })
+                        chat_id: path_parts[2]
                     })
-                
+                })
+
                     .then(function (response) {
                         return response.json();
                     })
                     .then(function (data) {
-                        sessionStorage.setItem("chat_id",data.chat_id);
+
+                        if (data.status == "Not Found") {
+                            createNewChat();
+                            return;
+                        }
+                        sessionStorage.setItem("chat_id", data.chat.chat_id);
                         // Display chat history
-                        data.messages.forEach(function (message) {
+                        data.chat.messages.forEach(function (message) {
+
                             var userQueryElement = document.createElement('div');
                             userQueryElement.classList.add('chat-message', 'user-message');
                             userQueryElement.innerHTML = '<p>' + message.user_query + '</p>';
@@ -43,127 +80,149 @@
                             // Display bot response
                             var botResponseElement = document.createElement('div');
                             botResponseElement.classList.add('chat-message', 'bot-message');
+
                             botResponseElement.innerHTML = '<p>' + render_markdown(message.bot_response) + '</p>';
                             chatMessages.appendChild(botResponseElement);
 
                             // Scroll to the bottom of the chat container
                             chatMessages.scrollTop = chatMessages.scrollHeight;
                         })
-                    }).catch(error => {
-                        // Handle errors here
-                        createNewChat();
-                    });
+                    })
             }
 
             // Send message
             sendButton.addEventListener('click', function () {
                 var userQuery = userQueryInput.value;
-
-                if (userQuery) {
-                    // Clear input field
-                    userQueryInput.value = '';
-
-                    // Send user query to server
-                    fetch('/send-message', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'S-Session-Id': sessionStorage.getItem('sid')
-                        },
-                        body: JSON.stringify({
-                            user_query: userQuery,
-                            chat_id : sessionStorage.getItem('chat_id')
+                if (sendButton.textContent == "Send") {
+                    if (userQuery) {
+                        // Disable the button while waiting for response
+                        enableStop();
+                        // Clear input field
+                        userQueryInput.value = '';
+                        autoResize();
+                        // Send user query to server
+                        fetch('/send-message', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'S-Session-Id': sessionStorage.getItem('sid')
+                            },
+                            body: JSON.stringify({
+                                user_query: userQuery,
+                                chat_id: sessionStorage.getItem('chat_id')
+                            })
                         })
-                    })
-                        .then(function (response) {
-                            return response.json();
-                        })
-                        .then(function (data) {
-                            if(data.status == "Not Found"){
-                                createNewChat();
-                            }
-                            else if(data.status == "ok"){
-                                if (data.new_chat) {
-                                    window.history.replaceState({}, '', '/c/' + data.chat_id);
-                                    sessionStorage.setItem("chat_id",data.chat_id);
+                            .then(function (response) {
+                                return response.json();
+                            })
+                            .then(function (data) {
+                                // Enable the button after receiving the response
+                                enableSend();
+                                if (data.status == "ok") {
+                                    if (data.new_chat) {
+                                        window.history.replaceState({}, '', '/c/' + data.chat.chat_id);
+                                        sessionStorage.setItem("chat_id", data.chat.chat_id);
+                                    }
+                                    insertMessage(data);
                                 }
-                                insertMessage(data);
-                            }  
-                        });
+                            });
+                    }
+                } else if (sendButton.textContent == "Stop") {
+                    stopChat();
+                    enableSend();
                 }
+
             });
-        const socket = io();
-        function insertMessage(data) {
-            
-            var messageElement = document.getElementById(data.message_id);
 
-            if (!messageElement) {
-                // Display user query
-                // Create a new message element if it doesn't exist
-                messageElement = document.createElement("div");
-                messageElement.id = data.message_id;
-                var userQueryElement = document.createElement('div');
-                userQueryElement.classList.add('chat-message', 'user-message');
-                userQueryElement.innerHTML = '<p>' + data.message[0].content + '</p>';
-                messageElement.appendChild(userQueryElement);
+            function insertMessage(data) {
 
-                // Display bot response
-                var botResponseElement = document.createElement('div');
-                botResponseElement.classList.add('chat-message', 'bot-message');
-                botResponseElement.innerHTML = '<p>' + render_markdown(data.message[1].content) + '</p>';
-                messageElement.appendChild(botResponseElement);
+                var messageElement = document.getElementById(data.chat.message_id);
 
-                chatMessages.appendChild(messageElement);
-            }else{
-                const botMessageDiv = messageElement.querySelector('.bot-message');
-                if(data.message[1].update){
-                    botMessageDiv.innerHTML ='<p>' + render_markdown(data.message[1].content) + '</p>';
+                if (!messageElement) {
+                    // Display user query
+                    // Create a new message element if it doesn't exist
+                    messageElement = document.createElement("div");
+                    messageElement.id = data.chat.message_id;
+                    var userQueryElement = document.createElement('div');
+                    userQueryElement.classList.add('chat-message', 'user-message');
+                    userQueryElement.innerHTML = '<p>' + data.chat.message[0].content + '</p>';
+                    messageElement.appendChild(userQueryElement);
+
+                    // Display bot response
+                    var botResponseElement = document.createElement('div');
+                    botResponseElement.classList.add('chat-message', 'bot-message');
+                    botResponseElement.innerHTML = '<p>' + render_markdown(data.chat.message[1].content) + '</p>';
+                    messageElement.appendChild(botResponseElement);
+                    chatMessages.appendChild(messageElement);
+                } else {
+                    const botMessageDiv = messageElement.querySelector('.bot-message');
+                    if (data.chat.message[1].update) {
+                        botMessageDiv.innerHTML = '<p>' + render_markdown(data.chat.message[1].content) + '</p>';
+                    }
                 }
+                // Scroll to the bottom of the chat container
+                chatMessages.scrollTop = chatMessages.scrollHeight;
             }
-            // Scroll to the bottom of the chat container
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
 
-        socket.on("connected", function (data) {
-            sessionStorage.setItem("sid", data.sid);
         });
-        socket.on("message", function(data){
-            insertMessage(data);
-        });
-        socket.on("disconnect", () => {
-            sessionStorage.removeItem("sid");
-    });
-        });
+
+
+
+
+
         function createNewChat() {
+            socket.disconnect();
+            socket.connect();
             window.history.pushState({}, '', '/');
             var element = document.getElementById("chat-messages");
             element.innerHTML = "";
             sessionStorage.removeItem("chat_id");
+
         }
-        </script>
+
+
+        function stopChat() {
+            fetch('/stop-process', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'S-Session-Id': sessionStorage.getItem('sid')
+                }
+            })
+                .then(function (response) {
+                    return response.json();
+                })
+                .then(function (data) {
+                    return data.status;
+                });
+        }
+    </script>
 </head>
 
 <body>
     <div class="container">
-        <div class="chat-container">
+        <div class="chat-container d-flex flex-column justify-content-between">
             <div class="row">
                 <div class="col-md-4">
                     <div class="chat-intro">
                         <h3>ClearView: Your Online Product Doubt Resolver</h3>
                         <img src="/static/img/clearview-logo.png" alt="Product Image" class="product-image">
-                        <p>Welcome! I'm here to help resolve any doubts or questions you have about our product.</p>
+                        <p>Welcome! I'm here to help resolve any doubts or questions you have about any Flipkart
+                            product.</p>
+                        <div class="new-chat">
+                            <button class="form-control new-chat-button" onclick="createNewChat()"
+                                id="new-chat-button">New
+                                Chat</a>
+                        </div>
+
                     </div>
                 </div>
                 <div class="col-md-8">
                     <div class="chat-transcript" id="chat-messages"></div>
-                    <div class="new-chat">
-                        <button class="form-control new-chat-button" onclick="createNewChat()" id="new-chat-button">New
-                            Chat</a>
-                    </div>
                     <div class="chat-input">
                         <div class="input-group">
                             <textarea id="user-query" class="user-query form-control" oninput="autoResize()"
-                                placeholder="Type your message"></textarea>
+                                placeholder="Type product link here. Ask your question."></textarea>
                             <div class="input-group-append">
                                 <button class="send-button" id="send-button">Send</button>
                             </div>

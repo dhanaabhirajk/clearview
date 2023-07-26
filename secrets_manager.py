@@ -9,4 +9,4 @@ with open("secrets.json", "r") as file:
 MONGODB_URI = secrets["MONGODB_URI"]
 NGROK_AUTH_TOKEN = secrets["NGROK_AUTH_TOKEN"]
 SECRET_KEY = secrets["SECRET_KEY"]
-
+DB_NAME = secrets["DB_NAME"]
