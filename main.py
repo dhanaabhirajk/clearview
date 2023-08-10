@@ -169,7 +169,7 @@ def send_message():
     return subprocess_threads[sid]['response']
 
 # Flask route to stop generating bot response for a session
-@app.route("/stop-process/", methods=['POST'])
+@app.route("/stop-process", methods=['POST'])
 def stop_process():
     sid = request.headers.get('S-Session-Id')
     status = stop_generating_response(sid, False)
